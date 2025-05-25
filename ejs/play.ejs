@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Worlde</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #121213;
+            color: #fff;
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            margin-top: 30px;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+        .board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 8px;
+            margin: 30px 0 20px 0;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .cell-input {
+            width: 50px;
+            height: 50px;
+            background: #121213;
+            border: 2px solid #3a3a3c;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            border-radius: 4px;
+            text-transform: uppercase;
+            outline: none;
+            caret-color: #6aaa64;
+        }
+        .cell-input:focus {
+            border-color: #6aaa64;
+        }
+        .keyboard {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+        .key-btn {
+            background: #818384;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            min-width: 36px;
+        }
+        .key-btn:active {
+            background: #565758;
+        }
+        .key-btn.wide {
+            min-width: 60px;
+        }
+        #winModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            z-index: 1000;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>Worlde</header>
+    <form class="board" autocomplete="off">
+        <% for(let i=0; i<6; i++) { %>
+            <div class="row">
+                <% for(let j=0; j<5; j++) { %>
+                    <input class="cell-input" maxlength="1" type="text" name="cell-<%= i %>-<%= j %>" id="cell-<%= i %>-<%= j %>" autocomplete="off" />
+                <% } %>
+            </div>
+        <% } %>
+    </form>
+    <div class="keyboard">
+        <div class="keyboard-row">
+            <% ['Q','W','E','R','T','Y','U','I','O','P'].forEach(l => { %>
+                <button type="button" class="key-btn"><%= l %></button>
+            <% }); %>
+        </div>
+        <div class="keyboard-row">
+            <% ['A','S','D','F','G','H','J','K','L'].forEach(l => { %>
+                <button type="button" class="key-btn"><%= l %></button>
+            <% }); %>
+        </div>
+        <div class="keyboard-row">
+            <button type="button" class="key-btn wide">Enter</button>
+            <% ['Z','X','C','V','B','N','M'].forEach(l => { %>
+                <button type="button" class="key-btn"><%= l %></button>
+            <% }); %>
+            <button type="button" class="key-btn wide">⌫</button>
+        </div>
+    </div>
+
+    <div id="winModal"></div>
+
+    <script>
+        const secretWord = "<%= word %>";
+        const rows = document.querySelectorAll('.row');
+        let currentRowIndex = 0;
+
+        function showModal(message) {
+            const modal = document.getElementById("winModal");
+            modal.textContent = message;
+            modal.style.display = "block";
+        }
+
+        function handleEnterPress() {
+            const currentRow = rows[currentRowIndex];
+            const inputs = currentRow.querySelectorAll('.cell-input');
+            const guess = Array.from(inputs).map(inp => inp.value.toUpperCase()).join('');
+
+            if (guess.length !== 5) return;
+
+            const letterCount = {};
+            for (let char of secretWord) {
+                letterCount[char] = (letterCount[char] || 0) + 1;
+            }
+
+            // First pass: green (correct)
+            for (let i = 0; i < 5; i++) {
+                const input = inputs[i];
+                const letter = input.value.toUpperCase();
+
+                if (secretWord[i] === letter) {
+                    input.style.backgroundColor = '#6aaa64';
+                    input.style.borderColor = '#6aaa64';
+                    letterCount[letter]--;
+                }
+            }
+
+            // Second pass: yellow/gray
+            for (let i = 0; i < 5; i++) {
+                const input = inputs[i];
+                const letter = input.value.toUpperCase();
+
+                if (secretWord[i] !== letter) {
+                    if (letterCount[letter]) {
+                        input.style.backgroundColor = '#c9b458';
+                        input.style.borderColor = '#c9b458';
+                        letterCount[letter]--;
+                    } else {
+                        input.style.backgroundColor = '#3a3a3c';
+                        input.style.borderColor = '#3a3a3c';
+                    }
+                }
+
+                input.style.transition = 'background 0.3s ease, transform 0.3s ease';
+                input.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    input.style.transform = 'scale(1)';
+                }, 150);
+            }
+
+            if (guess === secretWord) {
+                setTimeout(() => {
+                    showModal("🎉 Congrats! You guessed the word! Refresh to play again.");
+                }, 400);
+            } else if (currentRowIndex < 5) {
+                currentRowIndex++;
+                const nextRow = rows[currentRowIndex];
+                const nextInput = nextRow.querySelector('.cell-input');
+                if (nextInput) nextInput.focus();
+            } else {
+                setTimeout(() => {
+                    showModal(`❌ Game over. The word was: ${secretWord}`);
+                }, 400);
+            }
+        }
+
+        document.querySelectorAll('.cell-input').forEach(input => {
+            input.addEventListener('input', function () {
+                this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+                if (this.value && this.nextElementSibling) {
+                    this.nextElementSibling.focus();
+                }
+            });
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace' && !this.value) {
+                    const prev = this.previousElementSibling;
+                    if (prev) prev.focus();
+                } else if (e.key === 'Enter') {
+                    handleEnterPress();
+                }
+            });
+        });
+
+        document.querySelectorAll('.key-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const key = this.textContent.trim();
+                const active = document.activeElement;
+                if (active && active.classList.contains('cell-input')) {
+                    if (key === 'Enter') {
+                        handleEnterPress();
+                    } else if (key === '⌫') {
+                        active.value = '';
+                        const prev = active.previousElementSibling;
+                        if (prev) prev.focus();
+                    } else if (key.length === 1 && /[A-Z]/.test(key)) {
+                        active.value = key;
+                        const next = active.nextElementSibling;
+                        if (next) next.focus();
+                    }
+                }
+            });
+        });
+
+        window.onload = () => {
+            const first = document.querySelector('.cell-input');
+            if (first) first.focus();
+        };
+    </script>
+</body>
+</html>
